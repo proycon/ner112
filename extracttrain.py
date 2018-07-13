@@ -58,8 +58,19 @@ for inputfile in args.inputfiles:
         for interval in intervaltier:
             text = interval.mark
             if text is not None:
+                output = False
                 for tokens, chunktype in chunks(text):
-                    print(chunktype, tokens,file=sys.stderr)
+                    for i, token in enumerate(tokens):
+                        output = True
+                        if chunktype is None:
+                            tag = "O"
+                        elif i == 0:
+                            tag = "B-" + chunktype
+                        else:
+                            tag = "I-" + chunktype
+                        print(token + "\t" + tag)
+                if output:
+                    print("<utt>")
 
 
 
