@@ -30,7 +30,8 @@ def chunks(text):
     for i, c in enumerate(text.strip() + " "):
         if begin is not None:
             if c == '[':
-                raise ValueError("Nested [")
+                print("Skipping text because of nested brackets: " + text ,file=sys.stderr)
+                break
             elif c == ']':
                 end = i
             elif end is not None:
@@ -53,7 +54,11 @@ def chunks(text):
 
 
 for inputfile in args.inputfiles:
-    tg = textgrid.TextGrid.fromFile(inputfile)
+    try:
+        tg = textgrid.TextGrid.fromFile(inputfile)
+    except textgrid.exceptions.TextGridError:
+        print("ERROR: INVALID INPUTFILE:", inputfile,file=sys.stderr)
+        sys.exit(2)
     for intervaltier in tg:
         for interval in intervaltier:
             text = interval.mark
