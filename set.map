@@ -1,0 +1,9 @@
+loc:p loc.city
+loc:h loc.address.housenumber
+loc:s loc.street
+loc:l loc.country
+loc:c loc.address.postalcode
+loc:h loc.address.housenumber
+vehic veh
+name per
+sign vehic.registration
