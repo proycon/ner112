@@ -5,8 +5,9 @@ import os
 import argparse
 from pynlpl.formats import folia
 from frog import Frog, FrogOptions
+from collections import defaultdict
 
-def evaluate(testdoc, refentities, nerset):
+def evaluate(testdoc, refentities, nerset, classeval):
     tp = 0
     fp = 0
     fn = 0
@@ -22,12 +23,15 @@ def evaluate(testdoc, refentities, nerset):
         if any( testentity.text() == refentity_text and testentity.cls == refentity_cls for testentity in testentities ):
             tp += 1
             print("MATCH\t" +  refentity_text + "\t" + refentity_cls, file=sys.stderr)
+            classeval[refentity_cls]['tp'] += 1
         else:
             print("MISS\t" +  refentity_text + "\t" + refentity_cls, file=sys.stderr)
+            classeval[refentity_cls]['fn'] += 1
             fn += 1
     for testentity in testentities:
         if not any( testentity.text() == refentity_text and testentity.cls == refentity_cls for refentity_text, refentity_cls in refentities ):
             print("WRONG\t" +  testentity.text() + "\t" + testentity.cls, file=sys.stderr)
+            classeval[testentity.cls]['fp'] += 1
             fp += 1
     precision = tp / (tp + fp)
     recall = tp / (tp + fn)
@@ -58,6 +62,7 @@ def main():
     entity = None
     entity_cls = None
     doc = None
+    classeval = defaultdict(lambda: defaultdict(int))
     for filename in args.files:
         for token, tag in readdata(filename): #extracttrain also works on test gold standard
             if token is None: #end of sentence
@@ -68,7 +73,7 @@ def main():
                     print("Processing: ", " ".join(sentence),file=sys.stderr)
                     print("    Reference entities:", entities,file=sys.stderr)
                     doc = frog.process(" ".join(sentence))
-                    precision, recall = evaluate(doc, entities, args.nerset)
+                    precision, recall = evaluate(doc, entities, args.nerset, classeval)
                     print("     precision=",precision, " recall=", recall, file=sys.stderr)
                     if precision is not None:
                         precisions.append(precision)
@@ -90,8 +95,18 @@ def main():
                     entity = []
                 sentence.append(token)
 
-    print("precision= ", sum(precisions) / len(precisions))
-    print("recall= ", sum(recalls) / len(recalls))
+    print("overall precision (macroav):\t", sum(precisions) / len(precisions))
+    print("overall recall (macroav):\t", sum(recalls) / len(recalls))
+
+    for cls, evaldata in classeval.items():
+        try:
+            print(cls + " precision (microav):\t", evaldata['tp'] / (evaldata['tp']+evaldata['fp']))
+        except ZeroDivisionError:
+            print(cls + " precision (microav):\tn/a")
+        try:
+            print(cls + " recall (microav):\t", evaldata['tp'] / (evaldata['tp']+evaldata['fn']))
+        except ZeroDivisionError:
+            print(cls + " recall (microav):\tn/a")
 
 if __name__ == '__main__':
     main()
