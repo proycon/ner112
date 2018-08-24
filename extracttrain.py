@@ -6,12 +6,6 @@ import argparse
 import ucto
 import re
 
-parser = argparse.ArgumentParser(description="", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-#parser.add_argument('--storeconst',dest='settype',help="", action='store_const',const='somevalue')
-#parser.add_argument('-f','--dataset', type=str,help="", action='store',default="",required=False)
-#parser.add_argument('-i','--number',dest="num", type=int,help="", action='store',default="",required=False)
-parser.add_argument('inputfiles', nargs='+', help='Input files')
-args = parser.parse_args()
 
 tokenizer = ucto.Tokenizer("tokconfig-nld")
 
@@ -52,8 +46,7 @@ def chunks(text):
     if chunk.strip(): #don't forget the last one
         yield tokenize(chunk), None
 
-
-for inputfile in args.inputfiles:
+def gettokens(inputfile):
     try:
         tg = textgrid.TextGrid.fromFile(inputfile)
     except textgrid.exceptions.TextGridError:
@@ -73,13 +66,25 @@ for inputfile in args.inputfiles:
                             tag = "B-" + chunktype
                         else:
                             tag = "I-" + chunktype
-                        print(token + "\t" + tag)
+                        yield token, tag
                 if output:
-                    print("<utt>")
+                    yield None, None
 
 
+def main():
+    parser = argparse.ArgumentParser(description="", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    #parser.add_argument('--storeconst',dest='settype',help="", action='store_const',const='somevalue')
+    #parser.add_argument('-f','--dataset', type=str,help="", action='store',default="",required=False)
+    #parser.add_argument('-i','--number',dest="num", type=int,help="", action='store',default="",required=False)
+    parser.add_argument('inputfiles', nargs='+', help='Input files')
+    args = parser.parse_args()
 
+    for inputfile in args.inputfiles:
+        for token, tag in gettokens(inputfile):
+            if token is None:
+                print("<utt>")
+            else:
+                print(token + "\t" + tag)
 
-
-
-
+if __name__ == '__main__':
+    main()
