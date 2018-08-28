@@ -7,7 +7,13 @@ from pynlpl.formats import folia
 from frog import Frog, FrogOptions
 from collections import defaultdict
 
-def evaluate(testdoc, refentities, nerset, classeval):
+def matchtext(testtext, reftext, exact):
+    if exact:
+        return testtext == reftext
+    else:
+        return reftext.lower().endswith(testtext.lower())
+
+def evaluate(testdoc, refentities, nerset, classeval, exact):
     tp = 0
     fp = 0
     fn = 0
@@ -20,7 +26,7 @@ def evaluate(testdoc, refentities, nerset, classeval):
     elif not refentities and not testentities:
         return None, None
     for refentity_text, refentity_cls in refentities:
-        if any( testentity.text() == refentity_text and testentity.cls == refentity_cls for testentity in testentities ):
+        if any( matchtext(testentity.text(), refentity_text, exact) and testentity.cls == refentity_cls for testentity in testentities ):
             tp += 1
             print("MATCH\t" +  refentity_text + "\t" + refentity_cls, file=sys.stderr)
             classeval[refentity_cls]['tp'] += 1
@@ -29,7 +35,7 @@ def evaluate(testdoc, refentities, nerset, classeval):
             classeval[refentity_cls]['fn'] += 1
             fn += 1
     for testentity in testentities:
-        if not any( testentity.text() == refentity_text and testentity.cls == refentity_cls for refentity_text, refentity_cls in refentities ):
+        if not any( matchtext(testentity.text(), refentity_text, exact) and testentity.cls == refentity_cls for refentity_text, refentity_cls in refentities ):
             print("WRONG\t" +  testentity.text() + "\t" + testentity.cls, file=sys.stderr)
             classeval[testentity.cls]['fp'] += 1
             fp += 1
@@ -50,6 +56,7 @@ def main():
     parser = argparse.ArgumentParser(description="", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-s', '--nerset',type=str, help="NER FoLiA Set", action='store',default="https://raw.githubusercontent.com/proycon/folia/master/setdefinitions/namedentities.foliaset.ttl")
     parser.add_argument('-c','--config', type=str, help="Frog configuration", action='store',required=True)
+    parser.add_argument('--notexact',dest='exact', help="Loose evaluation", action='store_false', default=True)
     parser.add_argument('files', nargs='+', help='bar help')
     args = parser.parse_args()
 
@@ -73,7 +80,7 @@ def main():
                     print("Processing: ", " ".join(sentence),file=sys.stderr)
                     print("    Reference entities:", entities,file=sys.stderr)
                     doc = frog.process(" ".join(sentence))
-                    precision, recall = evaluate(doc, entities, args.nerset, classeval)
+                    precision, recall = evaluate(doc, entities, args.nerset, classeval, args.exact)
                     print("     precision=",precision, " recall=", recall, file=sys.stderr)
                     if precision is not None:
                         precisions.append(precision)
